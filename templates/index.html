@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lexer - Sintaxis y Semántica</title>
+    <link rel="stylesheet" href="../static/css/estilo.css">
+</head>
+<body>
+    <div class="floating-particles" id="particles"></div>
+    <div class="container">
+        <div class="header">
+            <a href="http://frre.utn.edu.ar"><img src="../static/img/UTN_FRRE.jpg" alt="UTN Logo" class="logo"></a>
+            <h1 class="title">Sintaxis y Semántica de Los Lenguajes</h1>
+            <h2 class="subtitle">TPI: Lexer</h2>
+        </div>
+
+        <div class="main-content">
+            <div class="card" style="animation: fadeInDown 1.2s ease-out;">
+                <h3 class="card-title">
+                    <span class="icon">🔤</span>
+                    Análisis de Símbolos
+                </h3>
+                
+                <div class="input-group">
+                    <label class="input-label" for="symbol-input">Ingrese un símbolo:</label>
+                    <input type="text" id="symbol-input" class="input-field" placeholder="Ej: if, =, 123, identifier">
+                </div>
+                
+                <button class="btn" onclick="analyzeSymbol()">
+                    <span>Analizar Símbolo</span>
+                </button>
+                
+                <div class="result-area" id="symbol-result">
+                    <div class="result-title">Resultado del análisis:</div>
+                    <div>Ingrese un símbolo para analizar...</div>
+                </div>
+            </div>
+
+            <div class="card" style="animation: fadeInDown 1.4s ease-out;">
+                <h3 class="card-title">
+                    <span class="icon">📄</span>
+                    Análisis de Archivo
+                </h3>
+                
+                <div class="input-group">
+                    <label class="input-label">Subir archivo JSON:</label>
+                    <div class="file-upload">
+                        <input type="file" id="file-input" class="file-input" accept=".json" onchange="handleFileUpload(this)">
+                        <label for="file-input" class="file-label">
+                            <div>📁 Arrastra o haz click para seleccionar archivo</div>
+                            <small>Solo archivos .json</small>
+                        </label>
+                    </div>
+                </div>
+                
+                <button class="btn" onclick="processFile()" id="process-btn" disabled>
+                    <span>Procesar Archivo</span>
+                </button>
+                
+                <div class="result-area" id="file-result">
+                    <div class="result-title">Estado del archivo:</div>
+                    <div>No se ha seleccionado ningún archivo...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let selectedFile = null;
+        
+        // Crear partículas flotantes
+        function createParticles() {
+            const particles = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.width = Math.random() * 10 + 5 + 'px';
+                particle.style.height = particle.style.width;
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 4 + 4) + 's';
+                particles.appendChild(particle);
+            }
+        }
+
+        // Función para analizar símbolos
+        async function analyzeSymbol() {
+            const symbolInput = document.getElementById('symbol-input');
+            const resultArea = document.getElementById('symbol-result');
+            const symbol = symbolInput.value.trim();
+            
+            if (!symbol) {
+                resultArea.innerHTML = `
+                    <div class="result-title">Resultado del análisis:</div>
+                    <div class="error">Por favor, ingrese un símbolo válido</div>
+                `;
+                return;
+            }
+            
+            // Mostrar loading
+            resultArea.innerHTML = `
+                <div class="result-title">Analizando...</div>
+                <div>🔄 Procesando símbolo "${symbol}"...</div>
+            `;
+            
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ symbol: symbol })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultArea.innerHTML = `
+                        <div class="result-title">Resultado del análisis:</div>
+                        <div>Símbolo analizado: <strong>"${data.symbol}"</strong></div>
+                        <div class="token-result">Token: ${data.token}</div>
+                        <div>Valor: <strong>${data.value}</strong></div>
+                        <div class="success">${data.message}</div>
+                        ${data.errors > 0 ? `<div class="error">⚠️ Errores encontrados: ${data.errors}</div>` : ''}
+                    `;
+                } else {
+                    resultArea.innerHTML = `
+                        <div class="result-title">Error en el análisis:</div>
+                        <div>Símbolo: <strong>"${data.symbol}"</strong></div>
+                        <div class="token-result">Token: ${data.token}</div>
+                        <div class="error">${data.error}</div>
+                        ${data.errors ? `<div class="error">⚠️ Errores totales: ${data.errors}</div>` : ''}
+                    `;
+                }
+            } catch (error) {
+                resultArea.innerHTML = `
+                    <div class="result-title">Error de conexión:</div>
+                    <div class="error">No se pudo conectar con el servidor: ${error.message}</div>
+                `;
+            }
+            
+            // Efectos visuales
+            resultArea.style.animation = 'none';
+            setTimeout(() => {
+                resultArea.style.animation = 'slideInRight 0.5s ease-out';
+            }, 10);
+        }
+
+        // Función simulada para obtener tokens (reemplazar con tu lógica)
+        function getSimulatedToken(symbol) {
+            const tokens = {
+                'if': 'KEYWORD_IF',
+                'while': 'KEYWORD_WHILE',
+                'for': 'KEYWORD_FOR',
+                '=': 'OPERATOR_ASSIGN',
+                '==': 'OPERATOR_EQUAL',
+                '+': 'OPERATOR_PLUS',
+                '-': 'OPERATOR_MINUS',
+                '(': 'DELIMITER_LPAREN',
+                ')': 'DELIMITER_RPAREN',
+                '{': 'DELIMITER_LBRACE',
+                '}': 'DELIMITER_RBRACE'
+            };
+            
+            if (tokens[symbol]) {
+                return tokens[symbol];
+            } else if (/^\d+$/.test(symbol)) {
+                return 'LITERAL_NUMBER';
+            } else if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(symbol)) {
+                return 'IDENTIFIER';
+            } else {
+                return 'UNKNOWN_TOKEN';
+            }
+        }
+
+        // Manejar carga de archivos
+        function handleFileUpload(input) {
+            const file = input.files[0];
+            const fileLabel = input.nextElementSibling;
+            const processBtn = document.getElementById('process-btn');
+            const resultArea = document.getElementById('file-result');
+            
+            if (file) {
+                if (file.type === 'application/json' || file.name.endsWith('.json')) {
+                    selectedFile = file;
+                    fileLabel.innerHTML = `
+                        <div>✅ ${file.name}</div>
+                        <small>Archivo listo para procesar</small>
+                    `;
+                    fileLabel.style.borderColor = '#48bb78';
+                    fileLabel.style.background = 'rgba(72, 187, 120, 0.05)';
+                    processBtn.disabled = false;
+                    processBtn.style.opacity = '1';
+                    
+                    resultArea.innerHTML = `
+                        <div class="result-title">Estado del archivo:</div>
+                        <div class="success">Archivo "${file.name}" cargado correctamente</div>
+                    `;
+                } else {
+                    selectedFile = null;
+                    fileLabel.innerHTML = `
+                        <div>❌ Tipo de archivo no válido</div>
+                        <small>Solo se permiten archivos .json</small>
+                    `;
+                    fileLabel.style.borderColor = '#f56565';
+                    fileLabel.style.background = 'rgba(245, 101, 101, 0.05)';
+                    processBtn.disabled = true;
+                    processBtn.style.opacity = '0.6';
+                    
+                    resultArea.innerHTML = `
+                        <div class="result-title">Estado del archivo:</div>
+                        <div class="error">Tipo de archivo no válido. Solo se permiten archivos .json</div>
+                    `;
+                }
+            }
+        }
+
+        // Procesar archivo
+        async function processFile() {
+            const resultArea = document.getElementById('file-result');
+            
+            if (!selectedFile) {
+                resultArea.innerHTML = `
+                    <div class="result-title">Estado del archivo:</div>
+                    <div class="error">No se ha seleccionado ningún archivo</div>
+                `;
+                return;
+            }
+            
+            // Mostrar loading
+            resultArea.innerHTML = `
+                <div class="result-title">Procesando archivo...</div>
+                <div>📊 Analizando contenido del archivo "${selectedFile.name}"...</div>
+            `;
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                
+                const response = await fetch('/api/process-file', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const result = data.result;
+                    resultArea.innerHTML = `
+                        <div class="result-title">Archivo procesado:</div>
+                        <div class="success">✅ ${result.message}</div>
+                        <div>🔢 Tokens encontrados: ${result.tokens_found}</div>
+                        <div>⚠️ Errores encontrados: ${result.errors_found}</div>
+                        <div>📊 Tamaño procesado: ${result.file_size} caracteres</div>
+                        <div>🏗️ Tipo de estructura: ${result.structure_type}</div>
+                    `;
+                } else {
+                    resultArea.innerHTML = `
+                        <div class="result-title">Error al procesar:</div>
+                        <div class="error">${data.error}</div>
+                    `;
+                }
+            } catch (error) {
+                resultArea.innerHTML = `
+                    <div class="result-title">Error de conexión:</div>
+                    <div class="error">No se pudo conectar con el servidor: ${error.message}</div>
+                `;
+            }
+            
+            // Efectos visuales
+            resultArea.style.animation = 'none';
+            setTimeout(() => {
+                resultArea.style.animation = 'slideInRight 0.5s ease-out';
+            }, 10);
+        }
+
+        // Eventos de teclado
+        document.getElementById('symbol-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                analyzeSymbol();
+            }
+        });
+
+        // Inicializar partículas cuando carga la página
+        window.addEventListener('load', function() {
+            createParticles();
+        });
+
+        // Efectos de hover para las cards
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-10px) rotateX(5deg)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) rotateX(0deg)';
+            });
+        });
+    </script>
+</body>
+</html>
